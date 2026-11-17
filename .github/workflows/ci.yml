@@ -1,1 +1,40 @@
+name: CI
 
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      SPARK_LOCAL_IP: 127.0.0.1   # avoids hostname resolution issues on CI runners
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17 (required by Spark)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate answers with plain Python (no Spark)
+        run: python validation/validate.py --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Run all tests (plain Python + PySpark)
+        run: pytest -v
+
+      - name: Run the full analysis end to end
+        run: python src/employee_analysis.py
